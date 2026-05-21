@@ -4,6 +4,7 @@ import {
   getListing,
   getRelatedListings,
   getSellerActiveListingsCount,
+  getSellerRating,
 } from '@/lib/queries'
 import { formatPrice, isExpired } from '@/lib/formatters'
 import { FadeIn } from '@/components/ui/motion'
@@ -14,6 +15,7 @@ import { ListingHeroGallery } from '@/components/listings/ListingHeroGallery'
 import { ListingBadges } from '@/components/listings/ListingBadges'
 import { ListingDetailsCard } from '@/components/listings/ListingDetailsCard'
 import { SellerTrustCard } from '@/components/listings/SellerTrustCard'
+import { SellerRating } from '@/components/listings/SellerRating'
 import { QuickWhatsAppQuestions } from '@/components/listings/QuickWhatsAppQuestions'
 import { ListingSecondaryActions } from '@/components/listings/ListingSecondaryActions'
 import { RelatedListingsCarousel } from '@/components/listings/RelatedListingsCarousel'
@@ -39,11 +41,14 @@ export default async function ListingDetailPage({ params }: Props) {
     return <MessageDetail listing={listing} school={school} />
   }
 
-  const [related, activeCount] = await Promise.all([
+  const [related, activeCount, sellerRating] = await Promise.all([
     getRelatedListings(listing, 8),
     listing.seller_id
       ? getSellerActiveListingsCount(listing.seller_id, listing.school_id)
       : Promise.resolve(1),
+    listing.seller_id
+      ? getSellerRating(listing.seller_id)
+      : Promise.resolve({ avg: 0, count: 0 }),
   ])
 
   const expired = isExpired(listing.expires_at) && listing.status === 'active'
@@ -103,6 +108,25 @@ export default async function ListingDetailPage({ params }: Props) {
             school={school}
             activeCount={activeCount}
           />
+
+          {listing.seller_id && (
+            <section className="rounded-3xl border border-border/70 bg-background p-4">
+              <h2 className="text-[0.95rem] font-semibold tracking-tight">
+                Calificación
+              </h2>
+              <p className="mt-1 text-[0.8rem] text-muted-foreground">
+                ¿Ya compraste o coordinaste con esta familia? Calificá tu
+                experiencia.
+              </p>
+              <div className="mt-3">
+                <SellerRating
+                  sellerId={listing.seller_id}
+                  sellerName={listing.seller_name}
+                  rating={sellerRating}
+                />
+              </div>
+            </section>
+          )}
 
           <QuickWhatsAppQuestions listing={listing} schoolName={school.name} />
 

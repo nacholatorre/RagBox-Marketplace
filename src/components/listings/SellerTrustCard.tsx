@@ -1,4 +1,5 @@
-import { ShieldCheck } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronRight, ShieldCheck } from 'lucide-react'
 import type { Listing, School } from '@/types'
 import { formatRelativeDate } from '@/lib/formatters'
 
@@ -11,16 +12,16 @@ interface Props {
 /**
  * Card de vendedor — avatar con inicial, nombre, familia del colegio,
  * publicaciones activas y antigüedad del aviso. Sin estrellas ni reseñas.
+ * Si el listing tiene seller_id, lleva al perfil público de la familia.
  */
 export function SellerTrustCard({ listing, school, activeCount }: Props) {
   const initial = (listing.seller_name?.charAt(0) ?? '?').toUpperCase()
   const activeLabel =
     activeCount === 1 ? '1 publicación activa' : `${activeCount} publicaciones activas`
 
-  return (
-    <section>
-      <h2 className="text-[0.95rem] font-semibold tracking-tight">Vendedor</h2>
-      <div className="mt-2.5 flex items-center gap-4 rounded-3xl border border-border/70 bg-background p-4 shadow-[0_2px_12px_-6px_oklch(0.22_0.05_255_/_0.12)]">
+  const innerContent = (
+    <>
+      <div className="flex items-center gap-4">
         <div className="relative shrink-0">
           <div className="flex size-12 items-center justify-center rounded-full bg-foreground text-[1.05rem] font-semibold text-background">
             {initial}
@@ -47,6 +48,28 @@ export function SellerTrustCard({ listing, school, activeCount }: Props) {
           </p>
         </div>
       </div>
+    </>
+  )
+
+  return (
+    <section>
+      <h2 className="text-[0.95rem] font-semibold tracking-tight">Vendedor</h2>
+      {listing.seller_id ? (
+        <Link
+          href={`/${school.slug}/vendedores/${listing.seller_id}`}
+          className="mt-2.5 block rounded-3xl border border-border/70 bg-background p-4 shadow-[0_2px_12px_-6px_oklch(0.22_0.05_255_/_0.12)] transition-colors hover:bg-muted/50 active:scale-[0.99]"
+        >
+          {innerContent}
+          <p className="mt-3 flex items-center gap-1 text-[0.78rem] font-semibold text-primary">
+            Ver perfil y publicaciones
+            <ChevronRight className="size-3.5" strokeWidth={2.4} />
+          </p>
+        </Link>
+      ) : (
+        <div className="mt-2.5 rounded-3xl border border-border/70 bg-background p-4 shadow-[0_2px_12px_-6px_oklch(0.22_0.05_255_/_0.12)]">
+          {innerContent}
+        </div>
+      )}
     </section>
   )
 }

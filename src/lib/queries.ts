@@ -42,6 +42,17 @@ export async function getSchoolBySlug(slug: string): Promise<School | null> {
   return (data as School) ?? null
 }
 
+/** Un perfil por id, o null si no existe. */
+export async function getProfileById(id: string): Promise<Profile | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  return (data as Profile) ?? null
+}
+
 /** Avisos de venta activos de un colegio con filtros y orden. */
 export async function getListings(
   schoolId: string,
