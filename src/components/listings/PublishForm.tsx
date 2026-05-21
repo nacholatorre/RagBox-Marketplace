@@ -1,12 +1,12 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ImagePlus, Loader2, MessageSquare, Tag, UserCog, X } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Category, Condition, School } from '@/types'
+import type { Category, Condition, Listing, School } from '@/types'
 import {
   CATEGORIES,
   CONDITIONS,
@@ -16,6 +16,7 @@ import {
   SIZED_CATEGORIES,
 } from '@/lib/constants'
 import { useAuth } from '@/hooks/useAuth'
+import { trackEvent } from '@/lib/track'
 import { cn } from '@/lib/utils'
 
 type Mode = 'sell' | 'message'
@@ -45,33 +46,74 @@ const MESSAGE_TYPE_TO_DB: Record<MessageType, 'request' | 'donation' | 'announce
   aviso: 'announcement',
 }
 
+const DB_TO_MESSAGE_TYPE: Record<'request' | 'donation' | 'announcement', MessageType> = {
+  request: 'busco',
+  donation: 'dono',
+  announcement: 'aviso',
+}
+
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const ALLOWED_IMAGE_ACCEPT = ALLOWED_IMAGE_TYPES.join(',')
 
 export function PublishForm({
   school,
   initialMode = 'sell',
+  editListing,
 }: {
   school: School
   initialMode?: Mode
+  /** Si viene, el form trabaja en modo edición (UPDATE del aviso existente). */
+  editListing?: Listing
 }) {
   const router = useRouter()
   const { user, profile, profileComplete, supabase } = useAuth()
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const [mode, setMode] = useState<Mode>(initialMode)
-  const [messageType, setMessageType] = useState<MessageType>('busco')
+  const isEditing = !!editListing
+  const editIsMessage = !!editListing && editListing.type !== 'sell'
+
+  const [mode, setMode] = useState<Mode>(
+    editListing ? (editIsMessage ? 'message' : 'sell') : initialMode,
+  )
+  const [messageType, setMessageType] = useState<MessageType>(
+    editListing && editIsMessage
+      ? DB_TO_MESSAGE_TYPE[editListing.type as 'request' | 'donation' | 'announcement']
+      : 'busco',
+  )
   const [previews, setPreviews] = useState<{ file: File; url: string }[]>([])
-  const [category, setCategory] = useState<Category | ''>('')
-  const [title, setTitle] = useState('')
-  const [message, setMessage] = useState('')
-  const [description, setDescription] = useState('')
-  const [size, setSize] = useState('')
-  const [condition, setCondition] = useState<Condition | ''>('')
-  const [hasPrice, setHasPrice] = useState(true)
-  const [price, setPrice] = useState('')
-  const [agreed, setAgreed] = useState(false)
+  const [category, setCategory] = useState<Category | ''>(
+    editListing && !editIsMessage ? editListing.category : '',
+  )
+  const [title, setTitle] = useState(
+    editListing && !editIsMessage ? editListing.title : '',
+  )
+  const [message, setMessage] = useState(
+    editListing && editIsMessage ? editListing.title : '',
+  )
+  const [description, setDescription] = useState(editListing?.description ?? '')
+  const [size, setSize] = useState(editListing?.size ?? '')
+  const [condition, setCondition] = useState<Condition | ''>(
+    editListing && !editIsMessage ? editListing.condition : '',
+  )
+  const [hasPrice, setHasPrice] = useState(
+    editListing ? editListing.price != null : true,
+  )
+  const [price, setPrice] = useState(
+    editListing?.price != null ? String(editListing.price) : '',
+  )
+  const [agreed, setAgreed] = useState(isEditing)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (isEditing) return
+    trackEvent(supabase, {
+      event_name: 'start_publish',
+      school_id: school.id,
+      user_id: user?.id ?? null,
+      metadata: { initial_mode: initialMode },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const isMessage = mode === 'message'
   const showSize = !!category && SIZED_CATEGORIES.includes(category)
@@ -158,27 +200,69 @@ export function PublishForm({
 
     setLoading(true)
     try {
+      // ----- Modo edición: UPDATE del aviso existente (sin tocar imágenes) -----
+      if (editListing) {
+        const patch = isMessage
+          ? { title: message.trim() }
+          : {
+              title: title.trim(),
+              description: description.trim() || null,
+              price: hasPrice && price ? Number(price) : null,
+              price_mode: (hasPrice && price ? 'fixed' : 'negotiable') as
+                | 'fixed'
+                | 'negotiable',
+              category,
+              condition,
+              size: showSize && size ? size : null,
+            }
+        const { error } = await supabase
+          .from('listings')
+          .update(patch)
+          .eq('id', editListing.id)
+        if (error) throw error
+        toast.success('Cambios guardados')
+        router.push(`/${school.slug}/${editListing.id}`)
+        router.refresh()
+        return
+      }
+
       // Carpeta única para las imágenes. Evitamos crypto.randomUUID porque
       // requiere contexto seguro (HTTPS o localhost) y rompe sobre HTTP de LAN.
       const folder = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
       const images = previews.length ? await uploadImages(folder) : []
 
       if (isMessage) {
-        const { error } = await supabase.from('listings').insert({
+        const { data, error } = await supabase
+          .from('listings')
+          .insert({
+            school_id: school.id,
+            seller_id: user.id,
+            type: MESSAGE_TYPE_TO_DB[messageType],
+            title: message.trim(),
+            price: null,
+            price_mode: 'free',
+            category: 'otros',
+            condition: 'usado',
+            seller_name: profile.full_name,
+            seller_whatsapp: profile.whatsapp,
+            images,
+            status: 'active',
+          })
+          .select('id')
+          .single()
+        if (error || !data) throw error ?? new Error('insert')
+        trackEvent(supabase, {
+          event_name: 'complete_publish',
+          listing_id: data.id,
           school_id: school.id,
           seller_id: user.id,
-          type: MESSAGE_TYPE_TO_DB[messageType],
-          title: message.trim(),
-          price: null,
-          price_mode: 'free',
-          category: 'otros',
-          condition: 'usado',
-          seller_name: profile.full_name,
-          seller_whatsapp: profile.whatsapp,
-          images,
-          status: 'active',
+          user_id: user.id,
+          metadata: {
+            listing_type: MESSAGE_TYPE_TO_DB[messageType],
+            category: 'otros',
+            has_images: images.length > 0,
+          },
         })
-        if (error) throw error
         toast.success('¡Mensaje publicado!')
         router.push(`/${school.slug}/tablon`)
         return
@@ -207,6 +291,18 @@ export function PublishForm({
 
       if (error || !data) throw error ?? new Error('insert')
 
+      trackEvent(supabase, {
+        event_name: 'complete_publish',
+        listing_id: data.id,
+        school_id: school.id,
+        seller_id: user.id,
+        user_id: user.id,
+        metadata: {
+          listing_type: 'sell',
+          category,
+          has_images: images.length > 0,
+        },
+      })
       toast.success('¡Aviso publicado!')
       router.push(`/${school.slug}/${data.id}`)
     } catch (err) {
@@ -215,43 +311,51 @@ export function PublishForm({
           ? String((err as { message: unknown }).message)
           : 'desconocido'
       console.error('[publish] error:', err)
-      toast.error(`No se pudo publicar: ${msg}`)
+      toast.error(
+        isEditing
+          ? `No se pudo guardar: ${msg}`
+          : `No se pudo publicar: ${msg}`,
+      )
       setLoading(false)
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 px-5 pb-10 pt-2">
-      {/* Qué quiero publicar */}
-      <Group label="¿Qué querés publicar?">
-        <div className="flex flex-wrap gap-2">
-          <Chip active={mode === 'sell'} onClick={() => setMode('sell')}>
-            <Tag className="size-4" strokeWidth={2} />
-            Vendo un producto
-          </Chip>
-          <Chip active={mode === 'message'} onClick={() => setMode('message')}>
-            <MessageSquare className="size-4" strokeWidth={2} />
-            Mensaje al Tablón
-          </Chip>
-        </div>
-      </Group>
+      {/* Qué quiero publicar — oculto en modo edición (el tipo es fijo) */}
+      {!isEditing && (
+        <Group label="¿Qué querés publicar?">
+          <div className="flex flex-wrap gap-2">
+            <Chip active={mode === 'sell'} onClick={() => setMode('sell')}>
+              <Tag className="size-4" strokeWidth={2} />
+              Vendo un producto
+            </Chip>
+            <Chip active={mode === 'message'} onClick={() => setMode('message')}>
+              <MessageSquare className="size-4" strokeWidth={2} />
+              Mensaje al Tablón
+            </Chip>
+          </div>
+        </Group>
+      )}
 
       {isMessage ? (
         <>
-          {/* Tipo de mensaje */}
-          <Group label="Tipo">
-            <div className="flex flex-wrap gap-2">
-              {MESSAGE_TYPES.map(t => (
-                <Chip
-                  key={t.key}
-                  active={messageType === t.key}
-                  onClick={() => setMessageType(t.key)}
-                >
-                  {t.label}
-                </Chip>
-              ))}
-            </div>
-          </Group>
+          {/* Tipo de mensaje — oculto en edición */}
+          {!isEditing && (
+            <Group label="Tipo">
+              <div className="flex flex-wrap gap-2">
+                {MESSAGE_TYPES.map(t => (
+                  <Chip
+                    key={t.key}
+                    active={messageType === t.key}
+                    onClick={() => setMessageType(t.key)}
+                  >
+                    {t.label}
+                  </Chip>
+                ))}
+              </div>
+            </Group>
+          )}
 
           {/* Mensaje */}
           <Group label="Tu mensaje">
@@ -271,30 +375,41 @@ export function PublishForm({
             </p>
           </Group>
 
-          {/* Foto opcional */}
-          <Group label="Foto" hint="Opcional — se ve al abrir el mensaje">
-            <ImagePicker
-              previews={previews}
-              onAdd={() => fileRef.current?.click()}
-              onRemove={removeImage}
-              showCover={false}
-            />
-          </Group>
+          {/* Foto opcional — oculta en edición */}
+          {!isEditing && (
+            <Group label="Foto" hint="Opcional — se ve al abrir el mensaje">
+              <ImagePicker
+                previews={previews}
+                onAdd={() => fileRef.current?.click()}
+                onRemove={removeImage}
+                showCover={false}
+              />
+            </Group>
+          )}
         </>
       ) : (
         <>
-          {/* Fotos */}
-          <Group
-            label="Fotos"
-            hint={`Hasta ${MAX_IMAGES}. La primera es la portada.`}
-          >
-            <ImagePicker
-              previews={previews}
-              onAdd={() => fileRef.current?.click()}
-              onRemove={removeImage}
-              showCover
-            />
-          </Group>
+          {/* Fotos — en edición se muestra una nota, las fotos no se editan */}
+          {isEditing ? (
+            <Group label="Fotos">
+              <p className="rounded-2xl bg-muted/60 px-4 py-3 text-[0.8rem] leading-relaxed text-muted-foreground">
+                Las fotos no se editan por ahora. Para cambiarlas, eliminá el
+                aviso y publicalo de nuevo.
+              </p>
+            </Group>
+          ) : (
+            <Group
+              label="Fotos"
+              hint={`Hasta ${MAX_IMAGES}. La primera es la portada.`}
+            >
+              <ImagePicker
+                previews={previews}
+                onAdd={() => fileRef.current?.click()}
+                onRemove={removeImage}
+                showCover
+              />
+            </Group>
+          )}
 
           {/* Categoría */}
           <Group label="Categoría">
@@ -402,19 +517,21 @@ export function PublishForm({
         onChange={e => addImages(e.target.files)}
       />
 
-      {/* Términos */}
-      <label className="flex items-start gap-3 rounded-2xl bg-muted/50 p-4">
-        <input
-          type="checkbox"
-          checked={agreed}
-          onChange={e => setAgreed(e.target.checked)}
-          className="mt-0.5 size-[1.05rem] shrink-0 accent-primary"
-        />
-        <span className="text-[0.8rem] leading-relaxed text-muted-foreground">
-          La publicación se muestra sin moderación previa. Soy responsable de la
-          información que cargo y del trato con la otra familia.
-        </span>
-      </label>
+      {/* Términos — oculto en edición (ya fueron aceptados al publicar) */}
+      {!isEditing && (
+        <label className="flex items-start gap-3 rounded-2xl bg-muted/50 p-4">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={e => setAgreed(e.target.checked)}
+            className="mt-0.5 size-[1.05rem] shrink-0 accent-primary"
+          />
+          <span className="text-[0.8rem] leading-relaxed text-muted-foreground">
+            La publicación se muestra sin moderación previa. Soy responsable de la
+            información que cargo y del trato con la otra familia.
+          </span>
+        </label>
+      )}
 
       <button
         type="submit"
@@ -423,6 +540,8 @@ export function PublishForm({
       >
         {loading ? (
           <Loader2 className="size-5 animate-spin" />
+        ) : isEditing ? (
+          'Guardar cambios'
         ) : isMessage ? (
           'Publicar mensaje'
         ) : (

@@ -9,6 +9,7 @@ import type { Listing, ListingStatus } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import { formatPrice } from '@/lib/formatters'
 import { categoryIcon } from '@/lib/constants'
+import { trackEvent } from '@/lib/track'
 import { EmptyState } from '@/components/common/EmptyState'
 import { cn } from '@/lib/utils'
 
@@ -44,6 +45,18 @@ export function MyListingsScreen() {
     if (error) return toast.error('No se pudo actualizar')
     setRows(prev => prev?.map(r => (r.id === id ? { ...r, status } : r)) ?? null)
     toast.success('Aviso actualizado')
+
+    if (status === 'sold' || status === 'fulfilled') {
+      const row = rows?.find(r => r.id === id)
+      trackEvent(supabase, {
+        event_name: status === 'sold' ? 'mark_sold' : 'mark_fulfilled',
+        listing_id: id,
+        seller_id: user?.id ?? null,
+        school_id: row?.school_id ?? null,
+        user_id: user?.id ?? null,
+        metadata: { listing_type: row?.type, category: row?.category },
+      })
+    }
   }
 
   async function remove(id: string) {
@@ -166,6 +179,30 @@ export function MyListingsScreen() {
                   </ActionBtn>
                 </>
               ))}
+            {isMessage && row.status === 'active' && (
+              <ActionBtn
+                disabled={busy === row.id}
+                onClick={() => setStatus(row.id, 'fulfilled')}
+              >
+                Marcar resuelto
+              </ActionBtn>
+            )}
+            {isMessage && row.status === 'fulfilled' && (
+              <ActionBtn
+                disabled={busy === row.id}
+                onClick={() => setStatus(row.id, 'active')}
+              >
+                Reactivar
+              </ActionBtn>
+            )}
+            {row.school && (
+              <Link
+                href={`/${row.school.slug}/${row.id}/editar`}
+                className="flex h-10 items-center rounded-full border border-border px-4 text-[0.85rem] font-semibold transition-colors hover:bg-muted"
+              >
+                Editar
+              </Link>
+            )}
             <button
               type="button"
               disabled={busy === row.id}

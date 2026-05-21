@@ -6,6 +6,10 @@ import {
   Search,
   Gift,
   CheckCircle2,
+  Eye,
+  Activity,
+  Sparkles,
+  PackagePlus,
 } from 'lucide-react'
 import type { AdminMetrics } from '@/lib/queries'
 import { CATEGORIES, categoryLabel, listingTypeLabel } from '@/lib/constants'
@@ -30,7 +34,16 @@ const RANGE_LABEL: Record<AdminMetrics['range'], string> = {
 }
 
 export function AdminDashboard({ metrics }: { metrics: AdminMetrics }) {
-  const { range, users, totals, contactsByType, contactsByCategory, topListings } = metrics
+  const {
+    range,
+    users,
+    totals,
+    contactRate,
+    publishFunnel,
+    contactsByType,
+    contactsByCategory,
+    topListings,
+  } = metrics
   const maxType = Math.max(contactsByType.sell, contactsByType.request, contactsByType.donation, 1)
   const maxCat = Math.max(...contactsByCategory.map(c => c.count), 1)
 
@@ -39,22 +52,51 @@ export function AdminDashboard({ metrics }: { metrics: AdminMetrics }) {
       {/* Filtro de rango */}
       <div>
         <p className="mb-2 text-[0.78rem] font-medium text-muted-foreground">
-          Métricas de contactos del rango
+          Métricas del rango seleccionado
         </p>
         <RangeFilter active={range} />
       </div>
 
       {/* Resumen principal */}
-      <div className="grid grid-cols-3 gap-2.5">
-        <Stat icon={<Users className="size-4" />} value={totals.families} label="Familias" />
-        <Stat icon={<Package className="size-4" />} value={totals.listings} label="Avisos" />
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+        <Stat icon={<Users className="size-4" />} value={`${totals.families}`} label="Familias" />
+        <Stat icon={<Package className="size-4" />} value={`${totals.listings}`} label="Avisos" />
+        <Stat
+          icon={<Eye className="size-4" />}
+          value={`${totals.views}`}
+          label={`Vistas · ${RANGE_LABEL[range]}`}
+        />
         <Stat
           icon={<MessageCircle className="size-4" />}
-          value={totals.contacts}
+          value={`${totals.contacts}`}
           label={`Contactos · ${RANGE_LABEL[range]}`}
           accent
         />
+        <Stat
+          icon={<Activity className="size-4" />}
+          value={contactRate == null ? '—' : `${contactRate.toFixed(1)}%`}
+          label="Tasa de contacto"
+        />
       </div>
+
+      {/* Embudo de publicación */}
+      <section>
+        <h2 className="mb-2.5 text-[0.95rem] font-semibold tracking-tight">
+          Embudo de publicación · {RANGE_LABEL[range]}
+        </h2>
+        {publishFunnel.started === 0 ? (
+          <EmptyHint text="Nadie empezó a publicar en este rango." />
+        ) : (
+          <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
+            <FunnelStep value={publishFunnel.started} label="Empezaron" />
+            <span className="text-muted-foreground">→</span>
+            <FunnelStep value={publishFunnel.completed} label="Completaron" />
+            <span className="ml-auto rounded-full bg-primary/12 px-3 py-1.5 text-[0.8rem] font-semibold text-primary">
+              {publishFunnel.conversionPct.toFixed(0)}% conversión
+            </span>
+          </div>
+        )}
+      </section>
 
       {/* Estados de avisos */}
       <section>
@@ -66,10 +108,20 @@ export function AdminDashboard({ metrics }: { metrics: AdminMetrics }) {
           <MiniStat
             icon={<CheckCircle2 className="size-3.5" />}
             value={totals.soldOrFulfilled}
-            label="Vendidos / resueltos"
+            label="Vendidos / resueltos (total)"
           />
           <MiniStat icon={<Search className="size-3.5" />} value={totals.requests} label="Pedidos Busco" />
           <MiniStat icon={<Gift className="size-3.5" />} value={totals.donations} label="Donaciones" />
+          <MiniStat
+            icon={<PackagePlus className="size-3.5" />}
+            value={totals.newListings}
+            label={`Nuevos · ${RANGE_LABEL[range]}`}
+          />
+          <MiniStat
+            icon={<Sparkles className="size-3.5" />}
+            value={totals.closedInRange}
+            label={`Cerrados · ${RANGE_LABEL[range]}`}
+          />
         </div>
       </section>
 
@@ -176,6 +228,15 @@ export function AdminDashboard({ metrics }: { metrics: AdminMetrics }) {
   )
 }
 
+function FunnelStep({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="text-center">
+      <p className="text-[1.5rem] font-semibold tabular-nums leading-none">{value}</p>
+      <p className="mt-1 text-[0.7rem] font-medium text-muted-foreground">{label}</p>
+    </div>
+  )
+}
+
 function Stat({
   icon,
   value,
@@ -183,7 +244,7 @@ function Stat({
   accent,
 }: {
   icon: React.ReactNode
-  value: number
+  value: string
   label: string
   accent?: boolean
 }) {

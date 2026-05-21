@@ -220,11 +220,17 @@ export interface AdminMetrics {
     families: number
     listings: number
     contacts: number
+    views: number
     activeListings: number
     soldOrFulfilled: number
     requests: number
     donations: number
+    newListings: number
+    closedInRange: number
   }
+  /** contactos / vistas en porcentaje. null si no hubo vistas. */
+  contactRate: number | null
+  publishFunnel: { started: number; completed: number; conversionPct: number }
   contactsByType: { sell: number; request: number; donation: number }
   contactsByCategory: { category: Category; count: number }[]
   topListings: {
@@ -257,22 +263,36 @@ interface ListingMeta {
   price: number | null
 }
 
-/** Datos para el panel de administración. Filtra contactos por rango de fecha. */
+/** Datos para el panel de administración. Filtra eventos por rango de fecha. */
 export async function getAdminMetrics(range: AdminRange = '7d'): Promise<AdminMetrics> {
   const supabase = await createClient()
   const cutoff = rangeCutoff(range)
 
-  // Query base de eventos click_whatsapp con filtro de fecha
+  // Todos los eventos del rango — se bucketean en memoria por event_name.
   let eventsQ = supabase
     .from('events')
-    .select('listing_id, metadata')
-    .eq('event_name', 'click_whatsapp')
+    .select('event_name, listing_id')
+    .in('event_name', [
+      'click_whatsapp',
+      'view_listing',
+      'start_publish',
+      'complete_publish',
+      'mark_sold',
+      'mark_fulfilled',
+    ])
   if (cutoff) eventsQ = eventsQ.gte('created_at', cutoff)
 
-  const [usersRes, listingsRes, eventsRes] = await Promise.all([
+  // Avisos creados dentro del rango
+  let newListingsQ = supabase
+    .from('listings')
+    .select('id', { count: 'exact', head: true })
+  if (cutoff) newListingsQ = newListingsQ.gte('created_at', cutoff)
+
+  const [usersRes, listingsRes, eventsRes, newListingsRes] = await Promise.all([
     supabase.from('profiles').select('*').order('created_at', { ascending: false }),
     supabase.from('listings').select('id, title, type, category, price, status'),
     eventsQ,
+    newListingsQ,
   ])
 
   const allListings = (listingsRes.data ?? []) as (ListingMeta & { status: string })[]
@@ -283,14 +303,24 @@ export async function getAdminMetrics(range: AdminRange = '7d'): Promise<AdminMe
     ]),
   )
 
-  const events = (eventsRes.data ?? []) as {
+  const allEvents = (eventsRes.data ?? []) as {
+    event_name: string
     listing_id: string | null
-    metadata: Record<string, unknown> | null
   }[]
 
-  // Conteos por listing
+  const eventsByName = (name: string) =>
+    allEvents.filter(e => e.event_name === name)
+
+  const contactEvents = eventsByName('click_whatsapp')
+  const viewEvents = eventsByName('view_listing')
+  const startEvents = eventsByName('start_publish')
+  const completeEvents = eventsByName('complete_publish')
+  const soldEvents = eventsByName('mark_sold')
+  const fulfilledEvents = eventsByName('mark_fulfilled')
+
+  // Conteos de contacto por listing
   const byListing = new Map<string, number>()
-  for (const ev of events) {
+  for (const ev of contactEvents) {
     if (!ev.listing_id) continue
     byListing.set(ev.listing_id, (byListing.get(ev.listing_id) ?? 0) + 1)
   }
@@ -298,7 +328,7 @@ export async function getAdminMetrics(range: AdminRange = '7d'): Promise<AdminMe
   // Contactos por tipo (sell/request/donation) y por categoría
   const byType = { sell: 0, request: 0, donation: 0 }
   const byCategoryMap = new Map<Category, number>()
-  for (const ev of events) {
+  for (const ev of contactEvents) {
     if (!ev.listing_id) continue
     const l = listingsById.get(ev.listing_id)
     if (!l) continue
@@ -325,6 +355,10 @@ export async function getAdminMetrics(range: AdminRange = '7d'): Promise<AdminMe
     })
 
   const sells = allListings.filter(l => l.type === 'sell')
+  const contacts = contactEvents.length
+  const views = viewEvents.length
+  const started = startEvents.length
+  const completed = completeEvents.length
 
   return {
     range,
@@ -332,13 +366,22 @@ export async function getAdminMetrics(range: AdminRange = '7d'): Promise<AdminMe
     totals: {
       families: (usersRes.data ?? []).length,
       listings: sells.length,
-      contacts: events.length,
+      contacts,
+      views,
       activeListings: sells.filter(l => l.status === 'active').length,
       soldOrFulfilled: allListings.filter(
         l => l.status === 'sold' || l.status === 'fulfilled',
       ).length,
       requests: allListings.filter(l => l.type === 'request' && l.status === 'active').length,
       donations: allListings.filter(l => l.type === 'donation' && l.status === 'active').length,
+      newListings: newListingsRes.count ?? 0,
+      closedInRange: soldEvents.length + fulfilledEvents.length,
+    },
+    contactRate: views > 0 ? (contacts / views) * 100 : null,
+    publishFunnel: {
+      started,
+      completed,
+      conversionPct: started > 0 ? (completed / started) * 100 : 0,
     },
     contactsByType: byType,
     contactsByCategory: Array.from(byCategoryMap.entries())

@@ -21,6 +21,7 @@ import { ListingSecondaryActions } from '@/components/listings/ListingSecondaryA
 import { RelatedListingsCarousel } from '@/components/listings/RelatedListingsCarousel'
 import { StickyWhatsAppCTA } from '@/components/listings/StickyWhatsAppCTA'
 import { MessageDetail } from '@/components/listings/MessageDetail'
+import { ListingViewTracker } from '@/components/listings/ListingViewTracker'
 
 interface Props {
   params: Promise<{ school: string; listingId: string }>
@@ -36,9 +37,24 @@ export default async function ListingDetailPage({ params }: Props) {
 
   if (!school || !listing || listing.school_id !== school.id) notFound()
 
+  const viewTracker = (
+    <ListingViewTracker
+      listingId={listing.id}
+      sellerId={listing.seller_id}
+      schoolId={listing.school_id}
+      category={listing.category}
+      listingType={listing.type}
+    />
+  )
+
   // Publicaciones del Tablón (no-venta) mantienen su vista existente.
   if (listing.type !== 'sell') {
-    return <MessageDetail listing={listing} school={school} />
+    return (
+      <>
+        {viewTracker}
+        <MessageDetail listing={listing} school={school} />
+      </>
+    )
   }
 
   const [related, activeCount, sellerRating] = await Promise.all([
@@ -55,6 +71,7 @@ export default async function ListingDetailPage({ params }: Props) {
 
   return (
     <div className="relative bg-surface pb-[7.5rem]">
+      {viewTracker}
       <ListingHeroGallery
         images={listing.images ?? []}
         title={listing.title}
