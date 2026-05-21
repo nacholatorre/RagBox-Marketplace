@@ -299,7 +299,7 @@ function ProfileSettings() {
       </button>
       {open && (
         <form onSubmit={save} className="space-y-3.5 border-t border-border p-4">
-          <SettingsField label="Tu nombre">
+          <SettingsField label="Nombre y apellido">
             <input
               value={fullName}
               onChange={e => setFullName(e.target.value)}

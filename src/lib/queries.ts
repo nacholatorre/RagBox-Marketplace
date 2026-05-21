@@ -61,7 +61,7 @@ export async function getListings(
   const supabase = await createClient()
   let q = supabase
     .from('listings')
-    .select('*, seller:profiles(avatar_url)')
+    .select('*, seller:profiles!seller_id(avatar_url)')
     .eq('school_id', schoolId)
     .eq('type', 'sell')
     .eq('status', 'active')
@@ -102,7 +102,7 @@ export async function getBoardPosts(
   const supabase = await createClient()
   let q = supabase
     .from('listings')
-    .select('*, seller:profiles(avatar_url)')
+    .select('*, seller:profiles!seller_id(avatar_url)')
     .eq('school_id', schoolId)
     .eq('status', 'active')
   q = type ? q.eq('type', type) : q.neq('type', 'sell')
@@ -115,7 +115,7 @@ export async function getListing(id: string): Promise<Listing | null> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('listings')
-    .select('*, seller:profiles(avatar_url)')
+    .select('*, seller:profiles!seller_id(avatar_url)')
     .eq('id', id)
     .maybeSingle()
   return (data as Listing) ?? null
@@ -126,7 +126,7 @@ export async function getListingsBySeller(sellerId: string): Promise<Listing[]> 
   const supabase = await createClient()
   const { data } = await supabase
     .from('listings')
-    .select('*, seller:profiles(avatar_url)')
+    .select('*, seller:profiles!seller_id(avatar_url)')
     .eq('seller_id', sellerId)
     .order('created_at', { ascending: false })
   return (data as Listing[]) ?? []

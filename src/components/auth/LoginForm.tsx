@@ -74,14 +74,14 @@ export function LoginForm() {
         Entrá a RagBox
       </h1>
       <p className="mt-2 text-[0.95rem] leading-relaxed text-muted-foreground">
-        Solo necesitamos tu nombre y tu WhatsApp para que otras familias de
-        Wellspring te puedan contactar. Sin email, sin contraseña.
+        Solo necesitamos tu nombre, apellido y WhatsApp para que otras familias
+        de Wellspring te puedan contactar. Sin email, sin contraseña.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-7 space-y-4">
         <div className="space-y-1.5">
           <label htmlFor="fullName" className="text-[0.85rem] font-semibold">
-            Tu nombre
+            Nombre y apellido
           </label>
           <input
             id="fullName"
