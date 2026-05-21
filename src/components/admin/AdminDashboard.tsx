@@ -1,5 +1,18 @@
-import { Users, Package, MessageCircle } from 'lucide-react'
+import {
+  Users,
+  Package,
+  MessageCircle,
+  Tag,
+  Search,
+  Gift,
+  CheckCircle2,
+} from 'lucide-react'
 import type { AdminMetrics } from '@/lib/queries'
+import { CATEGORIES, categoryLabel, listingTypeLabel } from '@/lib/constants'
+import { formatPrice } from '@/lib/formatters'
+import { RangeFilter } from './RangeFilter'
+import { MaskedPhone } from './MaskedPhone'
+import { MetricBar } from './MetricBar'
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-AR', {
@@ -9,45 +22,119 @@ function fmtDate(iso: string): string {
   })
 }
 
+const RANGE_LABEL: Record<AdminMetrics['range'], string> = {
+  today: 'hoy',
+  '7d': 'últimos 7 días',
+  '30d': 'últimos 30 días',
+  all: 'todo el tiempo',
+}
+
 export function AdminDashboard({ metrics }: { metrics: AdminMetrics }) {
-  const { users, listingCount, contactCount, topListings } = metrics
+  const { range, users, totals, contactsByType, contactsByCategory, topListings } = metrics
+  const maxType = Math.max(contactsByType.sell, contactsByType.request, contactsByType.donation, 1)
+  const maxCat = Math.max(...contactsByCategory.map(c => c.count), 1)
 
   return (
     <div className="space-y-7 px-5 py-4">
-      {/* Totales */}
+      {/* Filtro de rango */}
+      <div>
+        <p className="mb-2 text-[0.78rem] font-medium text-muted-foreground">
+          Métricas de contactos del rango
+        </p>
+        <RangeFilter active={range} />
+      </div>
+
+      {/* Resumen principal */}
       <div className="grid grid-cols-3 gap-2.5">
-        <Stat icon={<Users className="size-4" />} value={users.length} label="Familias" />
-        <Stat icon={<Package className="size-4" />} value={listingCount} label="Avisos" />
+        <Stat icon={<Users className="size-4" />} value={totals.families} label="Familias" />
+        <Stat icon={<Package className="size-4" />} value={totals.listings} label="Avisos" />
         <Stat
           icon={<MessageCircle className="size-4" />}
-          value={contactCount}
-          label="Contactos"
+          value={totals.contacts}
+          label={`Contactos · ${RANGE_LABEL[range]}`}
+          accent
         />
       </div>
 
-      {/* Avisos más contactados */}
-      {topListings.length > 0 && (
-        <section>
-          <h2 className="mb-2.5 text-[0.95rem] font-semibold tracking-tight">
-            Avisos más contactados
-          </h2>
+      {/* Estados de avisos */}
+      <section>
+        <h2 className="mb-2.5 text-[0.95rem] font-semibold tracking-tight">
+          Estado de los avisos
+        </h2>
+        <div className="grid grid-cols-2 gap-2.5">
+          <MiniStat icon={<Tag className="size-3.5" />} value={totals.activeListings} label="Activos" />
+          <MiniStat
+            icon={<CheckCircle2 className="size-3.5" />}
+            value={totals.soldOrFulfilled}
+            label="Vendidos / resueltos"
+          />
+          <MiniStat icon={<Search className="size-3.5" />} value={totals.requests} label="Pedidos Busco" />
+          <MiniStat icon={<Gift className="size-3.5" />} value={totals.donations} label="Donaciones" />
+        </div>
+      </section>
+
+      {/* Contactos por tipo */}
+      <section>
+        <h2 className="mb-2.5 text-[0.95rem] font-semibold tracking-tight">
+          Contactos por tipo
+        </h2>
+        {totals.contacts === 0 ? (
+          <EmptyHint text="Todavía no hay contactos en este rango." />
+        ) : (
+          <div className="space-y-2 rounded-2xl border border-border p-4">
+            <MetricBar label="Vendo" value={contactsByType.sell} max={maxType} tone="primary" />
+            <MetricBar label="Busco" value={contactsByType.request} max={maxType} tone="foreground" />
+            <MetricBar label="Dono" value={contactsByType.donation} max={maxType} tone="whatsapp" />
+          </div>
+        )}
+      </section>
+
+      {/* Contactos por categoría */}
+      <section>
+        <h2 className="mb-2.5 text-[0.95rem] font-semibold tracking-tight">
+          Contactos por categoría
+        </h2>
+        {contactsByCategory.length === 0 ? (
+          <EmptyHint text="Todavía no hay contactos en este rango." />
+        ) : (
+          <div className="space-y-2 rounded-2xl border border-border p-4">
+            {CATEGORIES.map(c => {
+              const n = contactsByCategory.find(x => x.category === c.slug)?.count ?? 0
+              return <MetricBar key={c.slug} label={c.label} value={n} max={maxCat} />
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Top publicaciones contactadas */}
+      <section>
+        <h2 className="mb-2.5 text-[0.95rem] font-semibold tracking-tight">
+          Top publicaciones contactadas
+        </h2>
+        {topListings.length === 0 ? (
+          <EmptyHint text="Sin avisos contactados en este rango." />
+        ) : (
           <div className="space-y-1.5">
             {topListings.map(l => (
               <div
                 key={l.id}
                 className="flex items-center gap-3 rounded-2xl border border-border px-3.5 py-3"
               >
-                <p className="min-w-0 flex-1 truncate text-[0.85rem] font-medium">
-                  {l.title}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[0.85rem] font-medium">{l.title}</p>
+                  <p className="mt-0.5 text-[0.7rem] text-muted-foreground">
+                    {listingTypeLabel(l.type)} · {categoryLabel(l.category)}
+                    {l.price != null && ` · ${formatPrice(l.price, 'fixed')}`}
+                  </p>
+                </div>
                 <span className="shrink-0 rounded-full bg-foreground px-2.5 py-1 text-[0.7rem] font-semibold text-background">
                   {l.contacts} {l.contacts === 1 ? 'contacto' : 'contactos'}
                 </span>
               </div>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* Familias registradas */}
       <section>
@@ -74,14 +161,7 @@ export function AdminDashboard({ metrics }: { metrics: AdminMetrics }) {
                   </p>
                 </div>
                 {u.whatsapp ? (
-                  <a
-                    href={`https://wa.me/${u.whatsapp}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 rounded-full bg-muted px-3 py-1.5 text-[0.78rem] font-medium tabular-nums transition-colors hover:bg-accent"
-                  >
-                    {u.whatsapp}
-                  </a>
+                  <MaskedPhone phone={u.whatsapp} />
                 ) : (
                   <span className="shrink-0 text-[0.72rem] text-muted-foreground">
                     sin WhatsApp
@@ -100,20 +180,58 @@ function Stat({
   icon,
   value,
   label,
+  accent,
+}: {
+  icon: React.ReactNode
+  value: number
+  label: string
+  accent?: boolean
+}) {
+  return (
+    <div className={`rounded-2xl border p-3.5 ${accent ? 'border-primary/30 bg-primary/[0.04]' : 'border-border'}`}>
+      <span
+        className={`flex size-8 items-center justify-center rounded-full ${
+          accent ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+        }`}
+      >
+        {icon}
+      </span>
+      <p className="mt-2 text-[1.5rem] font-semibold tracking-tight tabular-nums">
+        {value}
+      </p>
+      <p className="truncate text-[0.7rem] font-medium text-muted-foreground">
+        {label}
+      </p>
+    </div>
+  )
+}
+
+function MiniStat({
+  icon,
+  value,
+  label,
 }: {
   icon: React.ReactNode
   value: number
   label: string
 }) {
   return (
-    <div className="rounded-2xl border border-border p-3.5">
-      <span className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+    <div className="flex items-center gap-2.5 rounded-2xl border border-border px-3.5 py-2.5">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
         {icon}
       </span>
-      <p className="mt-2 text-[1.5rem] font-semibold tracking-tight tabular-nums">
-        {value}
-      </p>
-      <p className="text-[0.72rem] font-medium text-muted-foreground">{label}</p>
+      <div className="min-w-0">
+        <p className="text-[1rem] font-semibold tabular-nums">{value}</p>
+        <p className="truncate text-[0.68rem] text-muted-foreground">{label}</p>
+      </div>
     </div>
+  )
+}
+
+function EmptyHint({ text }: { text: string }) {
+  return (
+    <p className="rounded-2xl border border-dashed border-border px-4 py-3 text-[0.82rem] text-muted-foreground">
+      {text}
+    </p>
   )
 }

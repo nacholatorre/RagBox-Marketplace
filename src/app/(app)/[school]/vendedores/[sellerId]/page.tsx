@@ -164,7 +164,13 @@ export default async function SellerProfilePage({ params }: Props) {
         />
 
         {/* CTA WhatsApp */}
-        {waHref && <SellerWhatsAppButton href={waHref} />}
+        {waHref && (
+          <SellerWhatsAppButton
+            href={waHref}
+            sellerId={profile.id}
+            schoolId={school.id}
+          />
+        )}
       </div>
     </div>
   )

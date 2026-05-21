@@ -6,6 +6,7 @@
 -- ============================================================
 
 -- ---------- Reset ----------
+drop table if exists events cascade;
 drop table if exists contact_events cascade;
 drop table if exists comments cascade;
 drop table if exists reviews cascade;
@@ -135,7 +136,7 @@ create table comments (
 
 create index comments_listing_idx on comments(listing_id, created_at);
 
--- ---------- contact_events (clics en "Contactar por WhatsApp") ----------
+-- ---------- contact_events (legacy, ver tabla `events` mas abajo) ----------
 create table contact_events (
   id         uuid primary key default gen_random_uuid(),
   listing_id uuid references listings(id) on delete cascade not null,
@@ -144,6 +145,23 @@ create table contact_events (
 );
 
 create index contact_events_listing_idx on contact_events(listing_id);
+
+-- ---------- events (tracking generico — MVP analytics) ----------
+-- click_whatsapp + futuros view_listing, click_share, etc.
+create table events (
+  id         uuid primary key default gen_random_uuid(),
+  event_name text not null,
+  school_id  uuid references schools(id) on delete set null,
+  listing_id uuid references listings(id) on delete set null,
+  seller_id  uuid references profiles(id) on delete set null,
+  user_id    uuid references profiles(id) on delete set null,
+  session_id text,
+  metadata   jsonb not null default '{}',
+  created_at timestamptz not null default now()
+);
+
+create index events_name_created_idx on events(event_name, created_at desc);
+create index events_listing_idx      on events(listing_id);
 
 -- ---------- Trigger: crear profile al registrarse ----------
 create or replace function handle_new_user()
@@ -188,6 +206,7 @@ alter table reports       enable row level security;
 alter table reviews        enable row level security;
 alter table comments       enable row level security;
 alter table contact_events enable row level security;
+alter table events         enable row level security;
 
 -- schools: lectura pública
 create policy "schools_select" on schools for select using (true);
@@ -245,11 +264,16 @@ create policy "comments_insert" on comments for insert
 create policy "comments_delete" on comments for delete
   to authenticated using (auth.uid() = author_id);
 
--- contact_events: cualquiera registra un contacto; solo el admin lo lee
+-- contact_events: legacy — cualquiera inserta, solo el admin lee
 create policy "contact_events_insert" on contact_events for insert
   with check (true);
 create policy "contact_events_select" on contact_events for select
-  using ((auth.jwt() ->> 'email') = 'nachitolatorre@icloud.com');
+  using ((auth.jwt() ->> 'email') = '541159065841@ragbox.app');
+
+-- events: tracking publico (insert anonimo OK), solo el admin lee
+create policy "events_insert" on events for insert with check (true);
+create policy "events_select" on events for select
+  using ((auth.jwt() ->> 'email') = '541159065841@ragbox.app');
 
 -- ---------- Realtime ----------
 alter publication supabase_realtime add table messages;

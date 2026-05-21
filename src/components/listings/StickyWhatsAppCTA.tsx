@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import type { Listing } from '@/types'
 import { buildContactUrl } from '@/lib/whatsapp'
+import { trackEvent } from '@/lib/track'
 import { useAuth } from '@/hooks/useAuth'
 import { FavoriteButton } from './FavoriteButton'
 
@@ -40,10 +41,20 @@ export function StickyWhatsAppCTA({ listing, schoolName }: Props) {
       router.push(`/login?next=${encodeURIComponent(pathname)}`)
       return
     }
-    supabase
-      .from('contact_events')
-      .insert({ listing_id: listing.id, user_id: user?.id ?? null })
-      .then(() => {})
+    trackEvent(supabase, {
+      event_name: 'click_whatsapp',
+      listing_id: listing.id,
+      seller_id: listing.seller_id,
+      school_id: listing.school_id,
+      user_id: user?.id ?? null,
+      metadata: {
+        listing_title: listing.title,
+        listing_type: listing.type,
+        category: listing.category,
+        whatsapp_action: 'general_contact',
+        page_source: 'listing_detail',
+      },
+    })
   }
 
   return (

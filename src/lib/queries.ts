@@ -3,6 +3,7 @@ import type {
   Category,
   Condition,
   Listing,
+  ListingType,
   Profile,
   School,
   SellerRating,
@@ -210,53 +211,139 @@ export async function getSellerActiveListingsCount(
   return count ?? 0
 }
 
+export type AdminRange = 'today' | '7d' | '30d' | 'all'
+
 export interface AdminMetrics {
+  range: AdminRange
   users: Profile[]
-  listingCount: number
-  contactCount: number
-  topListings: { id: string; title: string; contacts: number }[]
+  totals: {
+    families: number
+    listings: number
+    contacts: number
+    activeListings: number
+    soldOrFulfilled: number
+    requests: number
+    donations: number
+  }
+  contactsByType: { sell: number; request: number; donation: number }
+  contactsByCategory: { category: Category; count: number }[]
+  topListings: {
+    id: string
+    title: string
+    type: ListingType
+    category: Category
+    price: number | null
+    contacts: number
+  }[]
 }
 
-/** Datos para el panel de administración (usuarios + métricas de contacto). */
-export async function getAdminMetrics(): Promise<AdminMetrics> {
+function rangeCutoff(range: AdminRange): string | null {
+  const now = new Date()
+  if (range === 'today') {
+    const d = new Date(now)
+    d.setHours(0, 0, 0, 0)
+    return d.toISOString()
+  }
+  if (range === '7d') return new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString()
+  if (range === '30d') return new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString()
+  return null
+}
+
+interface ListingMeta {
+  id: string
+  title: string
+  type: ListingType
+  category: Category
+  price: number | null
+}
+
+/** Datos para el panel de administración. Filtra contactos por rango de fecha. */
+export async function getAdminMetrics(range: AdminRange = '7d'): Promise<AdminMetrics> {
   const supabase = await createClient()
-  const [usersRes, listingCountRes, contactsRes] = await Promise.all([
+  const cutoff = rangeCutoff(range)
+
+  // Query base de eventos click_whatsapp con filtro de fecha
+  let eventsQ = supabase
+    .from('events')
+    .select('listing_id, metadata')
+    .eq('event_name', 'click_whatsapp')
+  if (cutoff) eventsQ = eventsQ.gte('created_at', cutoff)
+
+  const [usersRes, listingsRes, eventsRes] = await Promise.all([
     supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-    supabase.from('listings').select('id', { count: 'exact', head: true }),
-    supabase.from('contact_events').select('listing_id'),
+    supabase.from('listings').select('id, title, type, category, price, status'),
+    eventsQ,
   ])
 
-  const contacts = (contactsRes.data ?? []) as { listing_id: string }[]
+  const allListings = (listingsRes.data ?? []) as (ListingMeta & { status: string })[]
+  const listingsById = new Map<string, ListingMeta>(
+    allListings.map(l => [
+      l.id,
+      { id: l.id, title: l.title, type: l.type, category: l.category, price: l.price },
+    ]),
+  )
+
+  const events = (eventsRes.data ?? []) as {
+    listing_id: string | null
+    metadata: Record<string, unknown> | null
+  }[]
+
+  // Conteos por listing
   const byListing = new Map<string, number>()
-  for (const c of contacts) {
-    byListing.set(c.listing_id, (byListing.get(c.listing_id) ?? 0) + 1)
+  for (const ev of events) {
+    if (!ev.listing_id) continue
+    byListing.set(ev.listing_id, (byListing.get(ev.listing_id) ?? 0) + 1)
   }
 
-  const topIds = [...byListing.entries()]
+  // Contactos por tipo (sell/request/donation) y por categoría
+  const byType = { sell: 0, request: 0, donation: 0 }
+  const byCategoryMap = new Map<Category, number>()
+  for (const ev of events) {
+    if (!ev.listing_id) continue
+    const l = listingsById.get(ev.listing_id)
+    if (!l) continue
+    if (l.type === 'sell') byType.sell++
+    else if (l.type === 'request') byType.request++
+    else if (l.type === 'donation') byType.donation++
+    byCategoryMap.set(l.category, (byCategoryMap.get(l.category) ?? 0) + 1)
+  }
+
+  // Top 8 publicaciones contactadas
+  const topListings = [...byListing.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
-    .map(e => e[0])
+    .map(([id, contacts]) => {
+      const l = listingsById.get(id)
+      return {
+        id,
+        title: l?.title ?? 'Aviso eliminado',
+        type: l?.type ?? ('sell' as ListingType),
+        category: l?.category ?? ('otros' as Category),
+        price: l?.price ?? null,
+        contacts,
+      }
+    })
 
-  let topListings: AdminMetrics['topListings'] = []
-  if (topIds.length) {
-    const { data } = await supabase
-      .from('listings')
-      .select('id, title')
-      .in('id', topIds)
-    const titleById = new Map(
-      (data ?? []).map(l => [l.id as string, l.title as string]),
-    )
-    topListings = topIds.map(id => ({
-      id,
-      title: titleById.get(id) ?? 'Aviso eliminado',
-      contacts: byListing.get(id) ?? 0,
-    }))
-  }
+  const sells = allListings.filter(l => l.type === 'sell')
 
   return {
+    range,
     users: (usersRes.data as Profile[]) ?? [],
-    listingCount: listingCountRes.count ?? 0,
-    contactCount: contacts.length,
+    totals: {
+      families: (usersRes.data ?? []).length,
+      listings: sells.length,
+      contacts: events.length,
+      activeListings: sells.filter(l => l.status === 'active').length,
+      soldOrFulfilled: allListings.filter(
+        l => l.status === 'sold' || l.status === 'fulfilled',
+      ).length,
+      requests: allListings.filter(l => l.type === 'request' && l.status === 'active').length,
+      donations: allListings.filter(l => l.type === 'donation' && l.status === 'active').length,
+    },
+    contactsByType: byType,
+    contactsByCategory: Array.from(byCategoryMap.entries())
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count),
     topListings,
   }
 }
