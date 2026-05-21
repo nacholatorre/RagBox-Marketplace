@@ -1,8 +1,23 @@
 -- ============================================================
--- Narketplace — Setup completo de la base (ÚNICO script)
--- Pegá TODO esto en Supabase → SQL Editor → Run.
--- ⚠️ Reinicia las tablas: solo para desarrollo / datos de prueba.
--- Es el único archivo que hace falta correr.
+-- RagBox — schema completo (setup INICIAL de un proyecto nuevo)
+--
+-- ============================================================
+-- 🛑 🛑 🛑  PELIGRO — NO CORRAS ESTE ARCHIVO ENTERO EN PRODUCCIÓN  🛑 🛑 🛑
+--
+-- Este script empieza con `drop table cascade` de TODAS las tablas del schema
+-- público. Si lo ejecutás contra un proyecto con datos reales, vas a perder:
+--   - profiles (todas las familias registradas)
+--   - listings (todas las publicaciones de venta y del Tablón)
+--   - favorites, reports, reviews, comments, contact_events, events
+--   - los datos de Storage NO se borran, pero los UUIDs de profile sí
+--     → los avatares y fotos quedan huérfanos
+--
+-- Usalo SOLO para:
+--   - bootstrap de un proyecto Supabase nuevo y vacío
+--   - reset completo en un entorno de desarrollo descartable
+--
+-- Para agregar UNA tabla o policy a producción: copiá únicamente el bloque
+-- que necesitás y ejecutalo en SQL Editor. No pegues el archivo entero.
 -- ============================================================
 
 -- ---------- Reset ----------
