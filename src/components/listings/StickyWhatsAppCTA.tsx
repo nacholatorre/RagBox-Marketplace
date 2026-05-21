@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import type { Listing } from '@/types'
 import { buildContactUrl } from '@/lib/whatsapp'
 import { useAuth } from '@/hooks/useAuth'
@@ -24,12 +26,20 @@ interface Props {
  * Reemplaza a ListingActions en la pantalla de detalle premium.
  */
 export function StickyWhatsAppCTA({ listing, schoolName }: Props) {
-  const { user, supabase } = useAuth()
+  const { user, isAuthed, supabase } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
   const isOwner = !!user && user.id === listing.seller_id
   const unavailable =
     listing.status === 'sold' || listing.status === 'fulfilled'
 
-  function trackContact() {
+  function handleContactClick(e: React.MouseEvent) {
+    if (!isAuthed) {
+      e.preventDefault()
+      toast('Iniciá sesión para contactar por WhatsApp')
+      router.push(`/login?next=${encodeURIComponent(pathname)}`)
+      return
+    }
     supabase
       .from('contact_events')
       .insert({ listing_id: listing.id, user_id: user?.id ?? null })
@@ -61,7 +71,7 @@ export function StickyWhatsAppCTA({ listing, schoolName }: Props) {
               href={buildContactUrl(listing, schoolName)}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={trackContact}
+              onClick={handleContactClick}
               className="group relative flex h-14 flex-1 items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary text-[0.97rem] font-semibold text-primary-foreground shadow-[0_10px_30px_-12px_oklch(0.68_0.18_42_/_0.55)] transition-transform active:scale-[0.98]"
             >
               <span

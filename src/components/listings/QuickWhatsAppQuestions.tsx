@@ -1,7 +1,12 @@
+'use client'
+
+import { usePathname, useRouter } from 'next/navigation'
 import { Camera, Check, MapPin } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { toast } from 'sonner'
 import type { Listing } from '@/types'
 import { buildQuickQuestionUrl, type QuickQuestion } from '@/lib/whatsapp'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Props {
   listing: Listing
@@ -22,6 +27,18 @@ const QUESTIONS: Question[] = [
 
 /** 3 botones que abren WhatsApp con un cierre distinto pre-armado. */
 export function QuickWhatsAppQuestions({ listing, schoolName }: Props) {
+  const { isAuthed } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  function gateAuth(e: React.MouseEvent) {
+    if (!isAuthed) {
+      e.preventDefault()
+      toast('Iniciá sesión para contactar por WhatsApp')
+      router.push(`/login?next=${encodeURIComponent(pathname)}`)
+    }
+  }
+
   return (
     <section>
       <h2 className="text-[0.95rem] font-semibold tracking-tight">
@@ -34,6 +51,7 @@ export function QuickWhatsAppQuestions({ listing, schoolName }: Props) {
             href={buildQuickQuestionUrl(listing, schoolName, key)}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={gateAuth}
             className="group flex items-center gap-3 rounded-2xl border border-border/70 bg-background px-4 py-3.5 text-left text-[0.88rem] font-semibold text-foreground transition-all duration-200 hover:border-primary/40 hover:bg-primary/[0.04] active:scale-[0.98]"
           >
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">

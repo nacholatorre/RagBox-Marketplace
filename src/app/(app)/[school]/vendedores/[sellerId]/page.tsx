@@ -13,6 +13,7 @@ import { StarRating } from '@/components/listings/StarRating'
 import { SellerRating } from '@/components/listings/SellerRating'
 import { SellerStats } from '@/components/listings/SellerStats'
 import { SellerListingsTabs } from '@/components/listings/SellerListingsTabs'
+import { SellerWhatsAppButton } from '@/components/listings/SellerWhatsAppButton'
 
 interface Props {
   params: Promise<{ school: string; sellerId: string }>
@@ -163,16 +164,7 @@ export default async function SellerProfilePage({ params }: Props) {
         />
 
         {/* CTA WhatsApp */}
-        {waHref && (
-          <a
-            href={waHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-whatsapp text-[0.95rem] font-semibold text-background transition-transform active:scale-[0.98]"
-          >
-            Contactar por WhatsApp
-          </a>
-        )}
+        {waHref && <SellerWhatsAppButton href={waHref} />}
       </div>
     </div>
   )

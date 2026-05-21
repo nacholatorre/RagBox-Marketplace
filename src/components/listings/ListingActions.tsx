@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import type { Listing } from '@/types'
 import { buildContactUrl } from '@/lib/whatsapp'
 import { useAuth } from '@/hooks/useAuth'
@@ -21,7 +23,9 @@ export function ListingActions({
   listing: Listing
   schoolName: string
 }) {
-  const { user, supabase } = useAuth()
+  const { user, isAuthed, supabase } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
   const isOwner = !!user && user.id === listing.seller_id
   const isMessage = listing.type !== 'sell'
   const unavailable =
@@ -35,8 +39,14 @@ export function ListingActions({
     ? 'Este mensaje ya no está activo'
     : 'Este artículo ya no está disponible'
 
-  /** Registra el contacto por WhatsApp (fire-and-forget, no bloquea el link). */
-  function trackContact() {
+  /** Bloquea el contacto a usuarios sin sesión y trackea al resto. */
+  function handleContactClick(e: React.MouseEvent) {
+    if (!isAuthed) {
+      e.preventDefault()
+      toast('Iniciá sesión para contactar por WhatsApp')
+      router.push(`/login?next=${encodeURIComponent(pathname)}`)
+      return
+    }
     supabase
       .from('contact_events')
       .insert({ listing_id: listing.id, user_id: user?.id ?? null })
@@ -68,7 +78,7 @@ export function ListingActions({
               href={buildContactUrl(listing, schoolName)}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={trackContact}
+              onClick={handleContactClick}
               className="flex h-14 flex-1 items-center justify-center gap-2.5 rounded-full bg-whatsapp text-[0.95rem] font-semibold text-whatsapp-foreground transition-transform active:scale-[0.98]"
             >
               <WhatsAppGlyph className="size-[1.15rem]" />

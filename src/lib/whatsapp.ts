@@ -15,6 +15,8 @@ interface WhatsAppParams {
   title: string
   priceLabel: string
   schoolName: string
+  /** Talle (si aplica, solo se muestra en avisos de venta). */
+  size?: string | null
   /** Tipo de publicación — define el tono del mensaje. */
   type?: ListingType
   /** Frase de cierre (la pregunta). Si se omite, se usa la del tipo. */
@@ -31,6 +33,7 @@ export function buildWhatsAppUrl({
   title,
   priceLabel,
   schoolName,
+  size,
   type = 'sell',
   closing,
 }: WhatsAppParams): string {
@@ -42,6 +45,7 @@ export function buildWhatsAppUrl({
     intro = `Hola ${sellerName}, vi tu aviso en RagBox:`
     detailLines = [
       `Producto: ${title}`,
+      ...(size ? [`Talle: ${size}`] : []),
       `Precio: ${priceLabel}`,
       `Colegio: ${schoolName}`,
     ]
@@ -70,6 +74,7 @@ export function buildContactUrl(
     title: listing.title,
     priceLabel: formatPrice(listing.price, listing.price_mode),
     schoolName,
+    size: listing.size,
     type: listing.type,
     closing,
   })
