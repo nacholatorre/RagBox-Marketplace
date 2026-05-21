@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" fill="none" role="img" aria-label="Caja de RagBox con productos del colegio">
+  <!-- Corazón naranja decorativo (esquina superior derecha) -->
+  <path d="M488 80c-9-18-38-18-47 0-5 9 1 23 12 36l23 28 23-28c11-13 17-27 12-36-9-18-38-18-47 0z"
+        stroke="#F39A4C" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Mochila (atrás, izquierda) -->
+  <g stroke="#1E2952" stroke-width="5" stroke-linejoin="round">
+    <rect x="125" y="190" width="160" height="200" rx="22" fill="#2C3A6B"/>
+    <path d="M170 190c0-25 70-25 70 0" fill="#2C3A6B"/>
+    <rect x="155" y="282" width="100" height="60" rx="10" fill="#1E2952"/>
+    <rect x="170" y="305" width="70" height="6" rx="3" fill="#4858A0"/>
+  </g>
+
+  <!-- Sweater verde con cuello en V -->
+  <g stroke="#1E2952" stroke-width="5" stroke-linejoin="round">
+    <path d="M240 235 L275 175 Q320 145 365 175 L400 235 L378 268 L362 248 L355 380 L285 380 L278 248 L262 268 Z" fill="#1F4D33"/>
+    <path d="M295 197 L320 230 L345 197" fill="none" stroke="#B83A2A" stroke-width="4"/>
+  </g>
+
+  <!-- Polo blanca (más chica, a la derecha) -->
+  <g stroke="#1E2952" stroke-width="5" stroke-linejoin="round">
+    <path d="M395 252 L420 220 Q450 200 480 220 L505 252 L488 275 L478 258 L475 360 L425 360 L422 258 L412 275 Z" fill="#FFFFFF"/>
+    <line x1="450" y1="225" x2="450" y2="252" stroke="#1E2952" stroke-width="3"/>
+  </g>
+
+  <!-- Lápiz naranja saliendo arriba -->
+  <g stroke="#1E2952" stroke-width="4" stroke-linejoin="round">
+    <polygon points="478,170 485,192 494,180" fill="#1E2952"/>
+    <rect x="478" y="190" width="16" height="115" fill="#F39A4C"/>
+    <rect x="478" y="298" width="16" height="14" fill="#E8DCC8"/>
+    <rect x="478" y="310" width="16" height="10" fill="#B83A2A"/>
+  </g>
+
+  <!-- Libro de Matemática -->
+  <g stroke="#1E2952" stroke-width="5" stroke-linejoin="round">
+    <rect x="220" y="340" width="135" height="92" rx="5" fill="#3C5BB8"/>
+    <text x="287" y="380" text-anchor="middle"
+          font-family="Inter, system-ui, sans-serif" font-size="15" font-weight="700"
+          fill="#FFFFFF" stroke="none">MATEMÁTICA</text>
+    <line x1="232" y1="412" x2="343" y2="412" stroke="#FFFFFF" stroke-opacity="0.4" stroke-width="3"/>
+  </g>
+
+  <!-- Calculadora -->
+  <g stroke="#1E2952" stroke-width="4" stroke-linejoin="round">
+    <rect x="365" y="325" width="70" height="100" rx="6" fill="#8290A4"/>
+    <rect x="373" y="333" width="54" height="22" rx="3" fill="#D4DFC4"/>
+    <g fill="#1E2952" stroke="none">
+      <circle cx="382" cy="370" r="3"/><circle cx="400" cy="370" r="3"/><circle cx="418" cy="370" r="3"/>
+      <circle cx="382" cy="388" r="3"/><circle cx="400" cy="388" r="3"/><circle cx="418" cy="388" r="3"/>
+      <circle cx="382" cy="406" r="3"/><circle cx="400" cy="406" r="3"/><circle cx="418" cy="406" r="3"/>
+    </g>
+  </g>
+
+  <!-- Caja de cartón con etiqueta RagBox -->
+  <g stroke="#1E2952" stroke-width="6" stroke-linejoin="round">
+    <path d="M75 395 L 525 395 L 490 555 L 110 555 Z" fill="#D9B889"/>
+    <path d="M75 395 L 200 358 L 300 395" fill="#E8C9A0"/>
+    <path d="M525 395 L 400 358 L 300 395" fill="#E8C9A0"/>
+    <rect x="240" y="450" width="120" height="44" rx="6" fill="#FFFFFF" stroke="#1E2952" stroke-width="3"/>
+    <text x="300" y="481" text-anchor="middle"
+          font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="800"
+          fill="#1E2952" stroke="none">RagBox</text>
+  </g>
+
+  <!-- Panel del kilt (tartán) saliendo abajo a la izquierda -->
+  <g stroke="#1E2952" stroke-width="4" stroke-linejoin="round">
+    <rect x="100" y="510" width="80" height="55" fill="#2A4A33"/>
+    <g stroke="#B83A2A" stroke-width="3" stroke-opacity="0.85">
+      <line x1="112" y1="510" x2="112" y2="565"/>
+      <line x1="142" y1="510" x2="142" y2="565"/>
+      <line x1="170" y1="510" x2="170" y2="565"/>
+      <line x1="100" y1="525" x2="180" y2="525"/>
+      <line x1="100" y1="548" x2="180" y2="548"/>
+    </g>
+  </g>
+</svg>

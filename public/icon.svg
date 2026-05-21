@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg-dark-blue { fill: #1E3A5F; }
+      .brand-orange { fill: #F28C28; }
+      .shadow-blend { fill: #162B47; opacity: 0.15; }
+    </style>
+  </defs>
+
+  <g id="RagBox-Isotipo" transform="translate(25, 25)">
+    <!-- Cara Izquierda de la Caja (Estilo Libro) -->
+    <path class="bg-dark-blue" d="M 225,90 L 90,165 L 90,325 C 90,350 140,380 225,410 L 225,250 Z" />
+
+    <!-- Cara Derecha de la Caja -->
+    <path class="bg-dark-blue" d="M 225,250 L 225,410 C 310,380 360,350 360,325 L 360,185 L 290,225 Z" />
+
+    <!-- Solapa Abierta / Detalle Naranja -->
+    <path class="brand-orange" d="M 360,185 L 290,225 L 290,150 L 335,125 Z" />
+
+    <!-- Silueta Central: Lápiz y letra "R" en espacio negativo -->
+    <path class="bg-dark-blue" d="M 225,120 L 150,215 L 185,215 L 185,310 C 185,320 200,335 225,345 C 250,335 265,320 265,310 L 265,245 L 210,245 L 210,215 L 265,215 Z" />
+
+    <!-- Punta del Lápiz (espacio calado) -->
+    <polygon points="225,120 205,150 245,150" fill="#FFFFFF" />
+    <polygon points="225,120 215,135 235,135" class="bg-dark-blue" />
+
+    <!-- Hojas del Libro en la parte superior -->
+    <path fill="#FFFFFF" d="M 225,90 L 285,125 L 225,155 L 165,125 Z" />
+    <path class="shadow-blend" d="M 225,98 L 270,125 L 225,152 L 180,125 Z" />
+  </g>
+</svg>
