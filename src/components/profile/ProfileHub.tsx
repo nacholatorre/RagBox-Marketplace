@@ -8,6 +8,7 @@ import {
   BarChart3,
   ChevronRight,
   Heart,
+  LifeBuoy,
   Loader2,
   LogOut,
   Package,
@@ -20,7 +21,7 @@ import type { ListingStatus, ListingType, PriceMode, Category } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import { normalizeWhatsApp } from '@/lib/whatsapp'
 import { formatPrice } from '@/lib/formatters'
-import { categoryIcon, ADMIN_EMAIL } from '@/lib/constants'
+import { categoryIcon, ADMIN_EMAIL, ADMIN_WHATSAPP } from '@/lib/constants'
 import { StatusBadge } from '@/components/listings/StatusBadge'
 import { AvatarUploader } from '@/components/profile/AvatarUploader'
 
@@ -248,6 +249,19 @@ export function ProfileHub() {
           <ChevronRight className="size-4 text-muted-foreground" />
         </Link>
       )}
+
+      <a
+        href={`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(
+          'Hola, necesito ayuda con RagBox',
+        )}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-3 rounded-2xl border border-border p-4 transition-colors hover:bg-muted active:scale-[0.99]"
+      >
+        <LifeBuoy className="size-[1.15rem] text-muted-foreground" />
+        <span className="flex-1 text-[0.9rem] font-medium">Soporte</span>
+        <ChevronRight className="size-4 text-muted-foreground" />
+      </a>
 
       <button
         type="button"
