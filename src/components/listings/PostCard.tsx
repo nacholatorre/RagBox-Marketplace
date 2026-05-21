@@ -3,6 +3,7 @@ import { Camera } from 'lucide-react'
 import type { Listing, ListingType } from '@/types'
 import { formatRelativeDate } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
+import { SellerAvatar } from './SellerAvatar'
 
 /** Meta visual de la etiqueta del Tablón (BUSCO / DONO / AVISO). */
 export function postTagMeta(type: ListingType): { label: string; className: string } | null {
@@ -43,9 +44,12 @@ export function PostCard({
       href={`/${schoolSlug}/${post.id}`}
       className="flex gap-3 border-b border-border px-5 py-4 transition-colors active:bg-muted/50"
     >
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-[0.9rem] font-semibold text-background">
-        {post.seller_name.charAt(0).toUpperCase()}
-      </div>
+      <SellerAvatar
+        name={post.seller_name}
+        avatarUrl={post.seller?.avatar_url}
+        size={40}
+        className="shrink-0"
+      />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5 text-[0.8rem]">
           {tag && (

@@ -77,6 +77,8 @@ export interface Listing {
   status: ListingStatus
   created_at: string
   expires_at: string
+  /** Relación opcional con `profiles` cuando se hace JOIN — solo trae avatar. */
+  seller?: { avatar_url: string | null } | null
 }
 
 export type ListingInsert = Omit<Listing, 'id' | 'created_at' | 'expires_at'>

@@ -17,7 +17,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { ListingStatus, ListingType, PriceMode, Category } from '@/types'
+import type { Listing } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import { normalizeWhatsApp } from '@/lib/whatsapp'
 import { formatPrice } from '@/lib/formatters'
@@ -26,23 +26,10 @@ import { StatusBadge } from '@/components/listings/StatusBadge'
 import { AvatarUploader } from '@/components/profile/AvatarUploader'
 
 const SCHOOL_NAME = 'Wellspring School'
+const SCHOOL_SLUG = 'wellspring-ba'
 
-interface MyListing {
-  id: string
-  title: string
-  images: string[]
-  price: number | null
-  price_mode: PriceMode
-  status: ListingStatus
-  type: ListingType
-  category: Category
-  expires_at: string
-  school: { slug: string } | null
-}
-
-export function ProfileHub() {
+export function ProfileHub({ initialListings }: { initialListings: Listing[] }) {
   const { user, profile, supabase, signOut, refreshProfile } = useAuth()
-  const [listings, setListings] = useState<MyListing[] | null>(null)
   const [favCount, setFavCount] = useState(0)
 
   async function saveAvatar(url: string) {
@@ -61,21 +48,13 @@ export function ProfileHub() {
   useEffect(() => {
     if (!user) return
     supabase
-      .from('listings')
-      .select(
-        'id,title,images,price,price_mode,status,type,category,expires_at,school:schools(slug)',
-      )
-      .eq('seller_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => setListings((data as unknown as MyListing[]) ?? []))
-    supabase
       .from('favorites')
       .select('listing_id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .then(({ count }) => setFavCount(count ?? 0))
   }, [user, supabase])
 
-  const all = listings ?? []
+  const all = initialListings
   const sells = all.filter(l => l.type === 'sell')
   const messages = all.filter(l => l.type !== 'sell')
   const active = sells.filter(l => l.status === 'active' || l.status === 'reserved')
@@ -193,7 +172,7 @@ export function ProfileHub() {
               return (
                 <Link
                   key={l.id}
-                  href={l.school ? `/${l.school.slug}/${l.id}` : '#'}
+                  href={`/${SCHOOL_SLUG}/${l.id}`}
                   className="flex items-center gap-3 rounded-2xl border border-border p-2.5 transition-colors active:bg-muted"
                 >
                   <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted">

@@ -8,6 +8,7 @@ import {
 } from '@/lib/queries'
 import { normalizeWhatsApp } from '@/lib/whatsapp'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { SellerAvatar } from '@/components/listings/SellerAvatar'
 import { StarRating } from '@/components/listings/StarRating'
 import { SellerRating } from '@/components/listings/SellerRating'
 import { SellerStats } from '@/components/listings/SellerStats'
@@ -49,7 +50,6 @@ export default async function SellerProfilePage({ params }: Props) {
       })
     : null
 
-  const initial = (profile.full_name?.charAt(0) ?? '?').toUpperCase()
   const firstName = profile.full_name?.split(' ')[0] ?? 'esta familia'
 
   const experienceBadge = getExperienceBadge(rating.avg, rating.count)
@@ -68,9 +68,11 @@ export default async function SellerProfilePage({ params }: Props) {
         {/* Header */}
         <section className="flex items-center gap-4 rounded-3xl border border-border bg-background p-5 shadow-[0_2px_12px_-6px_oklch(0.22_0.05_255_/_0.12)]">
           <div className="relative shrink-0">
-            <div className="flex size-16 items-center justify-center rounded-full bg-foreground text-[1.4rem] font-semibold text-background">
-              {initial}
-            </div>
+            <SellerAvatar
+              name={profile.full_name ?? 'F'}
+              avatarUrl={profile.avatar_url}
+              size={64}
+            />
             <span
               aria-hidden
               className="absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full bg-emerald-500 text-background ring-2 ring-background"

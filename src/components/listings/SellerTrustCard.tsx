@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ChevronRight, ShieldCheck } from 'lucide-react'
 import type { Listing, School } from '@/types'
 import { formatRelativeDate } from '@/lib/formatters'
+import { SellerAvatar } from './SellerAvatar'
 
 interface Props {
   listing: Listing
@@ -15,7 +16,6 @@ interface Props {
  * Si el listing tiene seller_id, lleva al perfil público de la familia.
  */
 export function SellerTrustCard({ listing, school, activeCount }: Props) {
-  const initial = (listing.seller_name?.charAt(0) ?? '?').toUpperCase()
   const activeLabel =
     activeCount === 1 ? '1 publicación activa' : `${activeCount} publicaciones activas`
 
@@ -23,9 +23,11 @@ export function SellerTrustCard({ listing, school, activeCount }: Props) {
     <>
       <div className="flex items-center gap-4">
         <div className="relative shrink-0">
-          <div className="flex size-12 items-center justify-center rounded-full bg-foreground text-[1.05rem] font-semibold text-background">
-            {initial}
-          </div>
+          <SellerAvatar
+            name={listing.seller_name}
+            avatarUrl={listing.seller?.avatar_url}
+            size={48}
+          />
           <span
             aria-hidden
             className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full bg-emerald-500 text-background ring-2 ring-background"
