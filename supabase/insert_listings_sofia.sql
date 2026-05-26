@@ -7,15 +7,15 @@
 --
 -- Requisitos previos:
 --   - Colegio Wellspring existe (slug = 'wellspring-ba').
---   - Sofía ya se registró en la app y su profile tiene whatsapp = '5491170003793'.
+--   - Sofía ya se registró en la app y su profile tiene whatsapp = '541170003793'.
 --     Si no existe, el script aborta con error (no insertamos listings huérfanos).
 
 do $$
 declare
   v_school_id uuid;
   v_seller_id uuid;
-  v_whatsapp text := '5491170003793';
-  v_name     text := 'Sofía Latorre';
+  v_whatsapp text := '541170003793';
+  v_name     text := 'Sofia Latorre';
 begin
   select id into v_school_id from schools where slug = 'wellspring-ba';
   if v_school_id is null then
@@ -157,5 +157,5 @@ end $$;
 -- Verificar después de correr:
 --   select title, size, price, category
 --     from listings
---    where seller_id = (select id from profiles where whatsapp = '5491170003793')
+--    where seller_id = (select id from profiles where whatsapp = '541170003793')
 --    order by category, title, size;
