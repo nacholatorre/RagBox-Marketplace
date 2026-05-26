@@ -11,6 +11,7 @@ import { formatPrice } from '@/lib/formatters'
 import { categoryIcon } from '@/lib/constants'
 import { trackEvent } from '@/lib/track'
 import { EmptyState } from '@/components/common/EmptyState'
+import { DeleteOrSoldModal } from '@/components/listings/DeleteOrSoldModal'
 import { cn } from '@/lib/utils'
 
 type Row = Listing & { school: { slug: string } | null }
@@ -27,6 +28,7 @@ export function MyListingsScreen() {
   const { user, supabase } = useAuth()
   const [rows, setRows] = useState<Row[] | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -206,7 +208,7 @@ export function MyListingsScreen() {
             <button
               type="button"
               disabled={busy === row.id}
-              onClick={() => remove(row.id)}
+              onClick={() => setConfirmId(row.id)}
               className="h-10 rounded-full bg-destructive/10 px-4 text-[0.85rem] font-semibold text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-50"
             >
               Eliminar
@@ -215,6 +217,24 @@ export function MyListingsScreen() {
         </div>
         )
       })}
+
+      <DeleteOrSoldModal
+        open={confirmId !== null}
+        onClose={() => setConfirmId(null)}
+        busy={busy === confirmId}
+        onMarkSold={async () => {
+          if (!confirmId) return
+          const id = confirmId
+          await setStatus(id, 'sold')
+          setConfirmId(null)
+        }}
+        onDelete={async () => {
+          if (!confirmId) return
+          const id = confirmId
+          await remove(id)
+          setConfirmId(null)
+        }}
+      />
     </div>
   )
 }
