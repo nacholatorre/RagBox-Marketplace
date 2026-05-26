@@ -88,7 +88,7 @@ export async function getListings(
       q = q.order('created_at', { ascending: false })
   }
 
-  const { data } = await q.limit(30)
+  const { data } = await q.limit(200)
   return (data as Listing[]) ?? []
 }
 
@@ -107,7 +107,7 @@ export async function getBoardPosts(
     .eq('school_id', schoolId)
     .eq('status', 'active')
   q = type ? q.eq('type', type) : q.neq('type', 'sell')
-  const { data } = await q.order('created_at', { ascending: false }).limit(30)
+  const { data } = await q.order('created_at', { ascending: false }).limit(200)
   return (data as Listing[]) ?? []
 }
 
